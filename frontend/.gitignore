@@ -23,4 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 
+# API keys
+.env
+
 # add venv names to ignore
+genhacks_venv/
