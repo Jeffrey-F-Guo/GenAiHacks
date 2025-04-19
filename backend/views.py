@@ -1,11 +1,9 @@
 from flask import Blueprint, request, jsonify
-from agents.search_agent import SearchAgent
+from agents.input_agent import model
 import os
+import json
 
 api_blueprint = Blueprint('api', __name__, url_prefix='/api')
-
-# Initialize the real search agent
-search_agent = SearchAgent(maps_api_key=os.getenv("GOOGLE_MAPS_API_KEY"))
 
 @api_blueprint.route('/search', methods=['POST'])
 def search_activities():
@@ -27,19 +25,63 @@ def search_activities():
         if not location:
             return jsonify({"error": "Location is required"}), 400
 
-        # Combine into a natural language query for the agent
-        query = f"Find {', '.join(activity_types)} within {radius} miles of {location}"
-        result = search_agent.run(query)
-        return jsonify({"results": result})
+        # Create a natural language prompt for Gemini
+        prompt = f"""
+        Find fun activities in {location} within {radius} miles.
+        Focus on these types of activities: {', '.join(activity_types)}.
+        Return the results in JSON format with the following structure:
+        {{
+            "activities": [
+                {{
+                    "name": "Activity name",
+                    "type": "Activity type",
+                    "description": "Brief description",
+                    "location": "Address or area",
+                    "rating": "Rating if available"
+                }}
+            ]
+        }}
+        """
+
+        # Get response from Gemini
+        response = model.generate_content(prompt).text
+        
+        # Parse the response (Gemini should return valid JSON)
+        try:
+            result = json.loads(response)
+            return jsonify(result)
+        except json.JSONDecodeError:
+            return jsonify({"error": "Failed to parse AI response"}), 500
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 @api_blueprint.route('/activity/<activity_id>', methods=['GET'])
 def get_activity_details(activity_id):
-    """Stub for future: Get detailed info on a specific activity"""
-    # Currently, SearchAgent doesn’t have a get_details method, but you can add it later
-    return jsonify({"details": f"Details for activity {activity_id} not implemented yet."})
+    """Get detailed information about a specific activity"""
+    try:
+        # Create a prompt for detailed information
+        prompt = f"""
+        Provide detailed information about the activity with ID {activity_id}.
+        Include:
+        - Operating hours
+        - Contact information
+        - Popular times
+        - User reviews
+        - Any special features or requirements
+        
+        Return the information in JSON format.
+        """
+        
+        response = model.generate_content(prompt).text
+        try:
+            details = json.loads(response)
+            return jsonify({"details": details})
+        except json.JSONDecodeError:
+            return jsonify({"error": "Failed to parse AI response"}), 500
+            
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @api_blueprint.route('/health', methods=['GET'])
 def health_check():
