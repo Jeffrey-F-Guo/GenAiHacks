@@ -2,7 +2,7 @@ import { useState } from 'react'
 import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
 import './App.css'
-import MapComponent from './components/GoogleMap.tsx' // Import the map component
+import MapComponent from './components/GoogleMap'
 
 function App() {
   const [count, setCount] = useState(0)
@@ -27,10 +27,8 @@ function App() {
         </p>
       </div>
       
-      {/* Add the Map Component here */}
-      <div className="map-section">
-        <MapComponent />
-      </div>
+      {/* Map */}
+      <MapComponent />
       
       <p className="read-the-docs">
         Click on the Vite and React logos to learn more
