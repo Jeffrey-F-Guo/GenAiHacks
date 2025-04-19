@@ -1,28 +1,62 @@
+"""
+Data Collection Agent for Activity Finder.
+This agent is responsible for fetching activity data from various sources
+based on location and other parameters.
+"""
+import datetime
+
 class DataCollectionAgent:
     """
-    Agent responsible for collecting activity data from various sources
-    based on location and other parameters.
+    Agent responsible for collecting activity data from various sources.
+    
+    In a production environment, this would integrate with APIs such as
+    Yelp Fusion, Google Places, Eventbrite, etc.
     """
     
-    def get_activities(self, coords, datetime=None):
+    def __init__(self):
+        """Initialize the DataCollectionAgent with necessary configurations"""
+        # In production, you might initialize API clients here
+        # For MVP, we'll use mock data
+        pass
+    
+    def get_activities(self, coords, datetime_str=None):
         """
         Fetch activities near the given coordinates
         
         Args:
             coords (dict): Dictionary with lat and lng keys
-            datetime (str): Optional datetime string for time-based filtering
+            datetime_str (str): Optional datetime string for time-based filtering (ISO format)
             
         Returns:
             list: List of activity dictionaries
         """
-        # For MVP, we'll use mock data
-        # In a production app, you would integrate with APIs like:
-        # - Yelp Fusion API
-        # - Google Places API
-        # - Eventbrite API
-        # - TripAdvisor API
+        # Parse datetime if provided
+        activity_datetime = None
+        if datetime_str:
+            try:
+                activity_datetime = datetime.datetime.fromisoformat(datetime_str.replace('Z', '+00:00'))
+            except ValueError:
+                # If datetime parsing fails, continue without time filtering
+                pass
         
         # Generate mock activities around the provided coordinates
+        # In production, you would make API calls here
+        activities = self._generate_mock_activities(coords, activity_datetime)
+        
+        return activities
+    
+    def _generate_mock_activities(self, coords, datetime_obj=None):
+        """
+        Generate mock activities data for testing
+        
+        Args:
+            coords (dict): Center coordinates
+            datetime_obj (datetime): Optional datetime for time filtering
+            
+        Returns:
+            list: List of mock activities
+        """
+        # Base mock activities
         mock_activities = [
             {
                 "id": "1",
@@ -121,6 +155,48 @@ class DataCollectionAgent:
                 "rating": 4.0,
                 "opening_hours": ["10:00 AM - 9:00 PM"],
                 "description": "Large shopping center with various stores."
+            },
+            {
+                "id": "8",
+                "name": "Local Sports Game",
+                "category": "sports",
+                "location": {
+                    "address": "202 Stadium Blvd",
+                    "lat": coords["lat"] - 0.025,
+                    "lng": coords["lng"] - 0.03
+                },
+                "price_level": 3,
+                "rating": 4.5,
+                "opening_hours": ["Varies by game schedule"],
+                "description": "Professional sports event at the local stadium."
+            },
+            {
+                "id": "9",
+                "name": "Fine Dining Restaurant",
+                "category": "food",
+                "location": {
+                    "address": "303 Gourmet Street",
+                    "lat": coords["lat"] + 0.008,
+                    "lng": coords["lng"] - 0.009
+                },
+                "price_level": 4,
+                "rating": 4.9,
+                "opening_hours": ["5:00 PM - 11:00 PM"],
+                "description": "Upscale restaurant with award-winning chef."
+            },
+            {
+                "id": "10",
+                "name": "Modern Art Gallery",
+                "category": "culture",
+                "location": {
+                    "address": "404 Gallery Row",
+                    "lat": coords["lat"] - 0.012,
+                    "lng": coords["lng"] + 0.014
+                },
+                "price_level": 1,
+                "rating": 4.2,
+                "opening_hours": ["11:00 AM - 6:00 PM"],
+                "description": "Contemporary art gallery featuring local artists."
             }
         ]
         

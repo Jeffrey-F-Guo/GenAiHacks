@@ -28,3 +28,4 @@ dist-ssr
 
 # add venv names to ignore
 genhacks_venv/
+venv
