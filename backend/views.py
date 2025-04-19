@@ -1,11 +1,11 @@
 from flask import Blueprint, request, jsonify
-# Comment out the real agent import
-# from .agents.search_agent import SearchAgent
-from agents.mock_search_agent import MockSearchAgent
+from agents.search_agent import SearchAgent
+import os
 
 api_blueprint = Blueprint('api', __name__, url_prefix='/api')
-# Use the mock agent instead
-search_agent = MockSearchAgent()
+
+# Initialize the real search agent
+search_agent = SearchAgent(maps_api_key=os.getenv("GOOGLE_MAPS_API_KEY"))
 
 @api_blueprint.route('/search', methods=['POST'])
 def search_activities():
@@ -20,36 +20,26 @@ def search_activities():
     """
     try:
         data = request.get_json()
-        
-        # Required parameters
         location = data.get('location')
-        radius = data.get('radius', 100)  # Default 100 miles
+        radius = data.get('radius', 100)
         activity_types = data.get('activity_types', [])
-                
-        # Validate inputs
+
         if not location:
             return jsonify({"error": "Location is required"}), 400
-        
-        # Use the search agent to find activities
-        results = search_agent.search(
-            location=location,
-            radius=radius,
-            activity_types=activity_types,
-        )
-        
-        return jsonify({"results": results})
-        
+
+        # Combine into a natural language query for the agent
+        query = f"Find {', '.join(activity_types)} within {radius} miles of {location}"
+        result = search_agent.run(query)
+        return jsonify({"results": result})
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 @api_blueprint.route('/activity/<activity_id>', methods=['GET'])
 def get_activity_details(activity_id):
-    """Get detailed information about a specific activity"""
-    try:
-        details = search_agent.get_details(activity_id)
-        return jsonify({"details": details})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    """Stub for future: Get detailed info on a specific activity"""
+    # Currently, SearchAgent doesn’t have a get_details method, but you can add it later
+    return jsonify({"details": f"Details for activity {activity_id} not implemented yet."})
 
 @api_blueprint.route('/health', methods=['GET'])
 def health_check():
