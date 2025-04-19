@@ -1,8 +1,11 @@
 from flask import Blueprint, request, jsonify
-from .agents.search_agent import SearchAgent
+# Comment out the real agent import
+# from .agents.search_agent import SearchAgent
+from agents.mock_search_agent import MockSearchAgent
 
 api_blueprint = Blueprint('api', __name__, url_prefix='/api')
-search_agent = SearchAgent()
+# Use the mock agent instead
+search_agent = MockSearchAgent()
 
 @api_blueprint.route('/search', methods=['POST'])
 def search_activities():
@@ -11,7 +14,7 @@ def search_activities():
     Expected JSON payload:
     {
         "location": "San Francisco, CA",
-        "radius": 5000,  # in meters
+        "radius": 100,  # in miles
         "activity_types": ["restaurant", "park", "museum"]
     }
     """
@@ -20,13 +23,9 @@ def search_activities():
         
         # Required parameters
         location = data.get('location')
-        radius = data.get('radius', 5000)  # Default 5km
+        radius = data.get('radius', 100)  # Default 100 miles
         activity_types = data.get('activity_types', [])
-        
-        # Optional parameters
-        max_results = data.get('max_results', 10)
-        open_now = data.get('open_now', False)
-        
+                
         # Validate inputs
         if not location:
             return jsonify({"error": "Location is required"}), 400
@@ -36,8 +35,6 @@ def search_activities():
             location=location,
             radius=radius,
             activity_types=activity_types,
-            max_results=max_results,
-            open_now=open_now
         )
         
         return jsonify({"results": results})
