@@ -3,17 +3,55 @@ from dotenv import load_dotenv
 import os
 import google.generativeai as genai
 import re
+import requests
+from llama_index.core.agent import ReActAgent
+from llama_index.core.tools import FunctionTool  
+
 
 load_dotenv()
 
 # Configure Gemini API
 GEMINI_API_KEY = os.getenv('GOOGLE_GENAI_API_KEY')
+GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel("gemini-1.5-pro")
 
-prompt = "I'm in San Francisco and want to go out Saturday night. Any fun ideas?"
 
-def extract_event_preferences(prompt_text):
+def find_places(preferences):
+    location = preferences.get("location", "San Francisco")
+    interest = preferences.get("interest", "fun things")
+    time = preferences.get("time", "")
+    date = preferences.get("date", "")
+
+    query = f"{interest} in {location}"
+    if time:
+        query += f" during the {time}"
+    if date:
+        query += f" on {date}"
+
+    url = "https://maps.googleapis.com/maps/api/place/textsearch/json"
+    params = {
+        "query": query,
+        "key": GOOGLE_API_KEY
+    }
+
+    response = requests.get(url, params=params)
+    data = response.json()
+
+    return [
+        {
+            "name": place.get("name"),
+            "address": place.get("formatted_address"),
+            "rating": place.get("rating"),
+            "types": place.get("types"),
+        }
+        for place in data.get("results", [])[:5]
+    ]
+
+
+
+
+def extract_preferences(prompt_text):
     """
     Uses Gemini to extract structured preferences from a user's natural language input.
     Returns a JSON dictionary with keys: location, interests, date, time_of_day
@@ -49,6 +87,30 @@ User input:
         print(f"Error during extraction: {e}")
         return None
 
-# Test run
-result = extract_event_preferences(prompt)
-print("\nStructured Preferences:\n", json.dumps(result, indent=2))
+def run_agent(user_input):
+    preferences = extract_preferences(user_input)
+    print("Extracted:", preferences)
+
+    if preferences:
+        results = find_places(preferences)
+        return json.dumps(results, indent=2)
+    else:
+        return "Sorry, I couldn't understand your request."
+
+# # Test run
+# result = extract_event_preferences(prompt)
+# print("\nStructured Preferences:\n", json.dumps(result, indent=2))
+
+preferences = {
+    "location": "San Francisco",
+    "interest": "fun things",
+    "time": "evening",
+    "date": "Saturday"
+}
+
+message = "I'm in San Francisco and want to go out Saturday night. Any fun ideas?";
+response = run_agent(message)
+print(response)
+
+
+
