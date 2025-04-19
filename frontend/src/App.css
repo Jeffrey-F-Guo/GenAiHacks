@@ -3,74 +3,82 @@
   margin: 0 auto;
   padding: 2rem;
   text-align: center;
-  background-color: #f0f2f5;
 }
 
+/* App container styling */
 .app-container {
-  width: 100%;
-  min-height: 100vh;
-  background-color: #f0f2f5;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  gap: 2rem;
+}
+
+/* Title section styling without background */
+.title-section {
+  max-width: 800px;
+  margin: 0 auto 2rem;
+  padding: 0 1rem;
 }
 
 .app-title {
-  font-size: 3.5em;
-  font-weight: 700;
+  font-size: 3.6em;
+  line-height: 1.1;
+  margin: 0;
   color: #2563eb;
-  margin-bottom: 0.5em;
-  letter-spacing: -0.03em;
-  text-align: center;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  position: relative;
+  display: inline-block;
+  margin-bottom: 0.75rem;
+}
+
+/* Decorative underline */
+.title-underline {
+  height: 4px;
+  width: 120px;
+  background: linear-gradient(90deg, #2563eb, #93c5fd);
+  margin: 0 auto 1.5rem;
+  border-radius: 2px;
 }
 
 .app-subtitle {
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   color: #4b5563;
-  margin-bottom: 2.5rem;
+  margin: 0 auto;
+  white-space: nowrap;
+  line-height: 1.5;
   font-weight: 400;
+  padding: 0 1rem;
 }
 
-.footer {
-  margin-top: 3rem;
-  color: #6b7280;
-  font-size: 0.9rem;
+/* Original styling */
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
 }
-
-.options-section {
-  transition: all 0.3s ease;
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
 }
-
-.options-section:hover {
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
 }
-
-.category-button {
-  transform: scale(1);
-  transition: transform 0.2s ease;
-}
-
-.category-button:hover {
-  transform: scale(1.05);
-}
-
-.category-button.active {
-  background-color: #2563eb;
-  color: white;
-}
-
-@media (max-width: 768px) {
-  .app-title {
-    font-size: 2.5em;
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
   }
-  
-  .options-section {
-    padding: 16px;
+  to {
+    transform: rotate(360deg);
   }
 }
-
-@media (prefers-color-scheme: light), (prefers-color-scheme: dark) {
-  .app-container, #root, body, html {
-    background-color: #f0f2f5 !important;
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
   }
+}
+.card {
+  padding: 2em;
+}
+.read-the-docs {
+  color: #888;
 }
