@@ -9,14 +9,18 @@
 .app-container {
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 1rem; /* Reduced from 2rem to bring map closer to description */
+  /* Add a modest padding to the top of the container */
+  padding-top: 0.75rem;
 }
 
 /* Title section styling without background */
 .title-section {
   max-width: 800px;
-  margin: 0 auto 2rem;
+  margin: 0 auto 1rem; /* Reduced from 2rem to bring map closer to description */
   padding: 0 1rem;
+  /* Add a subtle space at the top of the title section */
+  padding-top: 1rem;
 }
 
 .app-title {
@@ -81,4 +85,15 @@
 }
 .read-the-docs {
   color: #888;
+}
+
+/* Media query for smaller screens */
+@media (max-width: 768px) {
+  .title-section {
+    padding-top: 2rem;
+  }
+  
+  .app-subtitle {
+    white-space: normal;
+  }
 }

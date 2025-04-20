@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import './App.css'
 import MapComponent from './components/GoogleMap'
-import NoteComponent from './components/NoteComponent'
 
 function App() {
   const [savedNote, setSavedNote] = useState<string>('');
@@ -22,9 +21,6 @@ function App() {
       
       {/* Map */}
       <MapComponent />
-      
-      {/* Notes */}
-      <NoteComponent onNoteSave={handleNoteSave} />
       
     </div>
   )

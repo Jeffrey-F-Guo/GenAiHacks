@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { GoogleMap, LoadScript, Marker, Autocomplete } from '@react-google-maps/api';
 
-// Dynamic container style
-const getContainerStyle = (optionsHeight: number) => ({
+// Fixed height for the map container
+const mapContainerStyle = {
   width: '100%',
-  height: '500px',
+  height: '400px', // Fixed height to match options section
   borderRadius: '12px',
-});
+};
 
 const initialCenter = {
   lat: 37.7749,
@@ -37,16 +37,12 @@ function MapComponent() {
   const [radiusInMiles, setRadiusInMiles] = useState<number>(5);
   const [selectedCategories, setSelectedCategories] = useState<string[]>(['entertainment']);
   const [isMobile, setIsMobile] = useState<boolean>(window.innerWidth < 1024);
-  const [optionsHeight, setOptionsHeight] = useState<number>(0);
   const [showResults, setShowResults] = useState<boolean>(false);
 
-  // We'll only use the map reference directly
+  // References
   const mapRef = useRef<google.maps.Map | null>(null);
   const circleRef = useRef<google.maps.Circle | null>(null);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
-  const optionsSectionRef = useRef<HTMLDivElement | null>(null);
-  const mapContainerRef = useRef<HTMLDivElement | null>(null);
-  const searchButtonRef = useRef<HTMLButtonElement | null>(null);
 
   // Load API key
   useEffect(() => {
@@ -58,30 +54,11 @@ function MapComponent() {
 
     const handleResize = () => {
       setIsMobile(window.innerWidth < 1024);
-      updateOptionsHeight();
     };
 
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-
-  // Update options height
-  useEffect(() => {
-    updateOptionsHeight();
-    const timer = setTimeout(updateOptionsHeight, 100);
-    return () => clearTimeout(timer);
-  }, [selectedCategories, isMobile]);
-
-  const updateOptionsHeight = () => {
-    if (optionsSectionRef.current && searchButtonRef.current && !isMobile) {
-      const optionsHeight = optionsSectionRef.current.offsetHeight;
-      const buttonHeight = searchButtonRef.current.offsetHeight;
-      const totalHeight = optionsHeight + buttonHeight + 16; // 16px for gap
-      setOptionsHeight(totalHeight);
-    } else {
-      setOptionsHeight(400); // Default height for mobile
-    }
-  };
 
   // Function to handle map load
   const onMapLoad = useCallback((map: google.maps.Map) => {
@@ -157,6 +134,8 @@ function MapComponent() {
     }
     
     setError('');
+    // Auto-search when location is updated
+    setShowResults(true);
   };
 
   const handlePlaceChanged = () => {
@@ -168,27 +147,19 @@ function MapComponent() {
     updateMapPosition(place.geometry.location);
   };
 
-  const handleManualSearch = () => {
-    if (!inputValue.trim()) return;
-
-    if (window.google && window.google.maps) {
-      const geocoder = new window.google.maps.Geocoder();
-      geocoder.geocode({ address: inputValue }, (results, status) => {
-        if (status === 'OK' && results && results[0]) {
-          updateMapPosition(results[0].geometry.location);
-          // Show results after search
-          setShowResults(true);
-        } else {
-          setError('Location not found. Try a different address.');
-        }
-      });
-    }
-  };
-
   const handleEnterKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      handleManualSearch();
+      if (window.google && window.google.maps && inputValue.trim()) {
+        const geocoder = new window.google.maps.Geocoder();
+        geocoder.geocode({ address: inputValue }, (results, status) => {
+          if (status === 'OK' && results && results[0]) {
+            updateMapPosition(results[0].geometry.location);
+          } else {
+            setError('Location not found. Try a different address.');
+          }
+        });
+      }
     }
   };
 
@@ -242,9 +213,8 @@ function MapComponent() {
                 gap: '16px',
                 width: '100%'
               }}
-              ref={mapContainerRef}
             >
-              {/* Search bar - now exactly as wide as the map */}
+              {/* Search bar */}
               <Autocomplete
                 onLoad={(ref) => (autocompleteRef.current = ref)}
                 onPlaceChanged={handlePlaceChanged}
@@ -272,7 +242,7 @@ function MapComponent() {
               {/* Map */}
               <div style={{ width: '100%' }}>
                 <GoogleMap
-                  mapContainerStyle={getContainerStyle(optionsHeight)}
+                  mapContainerStyle={mapContainerStyle}
                   center={center}
                   zoom={14}
                   onLoad={onMapLoad}
@@ -284,16 +254,22 @@ function MapComponent() {
                   }}
                 >
                   <Marker position={markerPosition} />
-                  {/* No Circle component here - we manage it directly */}
                 </GoogleMap>
               </div>
             </div>
 
-            {/* Right side - Options on top with Search Button below */}
-            <div style={{ flex: isMobile ? 'auto' : 1, display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {/* Options Section now on top */}
+            {/* Right side - Options */}
+            <div 
+              style={{ 
+                flex: isMobile ? 'auto' : 1, 
+                display: 'flex', 
+                flexDirection: 'column',
+                width: '100%',
+                height: isMobile ? 'auto' : '400px', // Match height with map
+              }}
+            >
+              {/* Options Section */}
               <div 
-                ref={optionsSectionRef}
                 className="options-section"
                 style={{
                   backgroundColor: '#f0f7ff',
@@ -303,6 +279,9 @@ function MapComponent() {
                   minWidth: isMobile ? 'auto' : '250px',
                   boxSizing: 'border-box',
                   width: '100%',
+                  height: isMobile ? 'auto' : '800px', // Increased height
+                  display: 'flex',
+                  flexDirection: 'column',
                 }}
               >
                 <h2 style={{ 
@@ -318,10 +297,11 @@ function MapComponent() {
                 <div style={{ 
                   display: 'flex', 
                   flexDirection: 'column', 
-                  gap: '24px'
+                  gap: '16px',
+                  flex: 1 // Fill available space
                 }}>
                   {/* Radius Slider */}
-                  <div style={{ marginTop: '20px', padding: '0 10px' }}>
+                  <div style={{ padding: '0 10px' }}>
                     <div style={{ 
                       display: 'flex', 
                       justifyContent: 'space-between', 
@@ -366,7 +346,7 @@ function MapComponent() {
                   </div>
                   
                   {/* Categories - with multi-select */}
-                  <div>
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                     <p style={{ 
                       marginBottom: '10px',
                       fontWeight: 500,
@@ -377,7 +357,8 @@ function MapComponent() {
                     <div style={{ 
                       display: 'flex', 
                       flexDirection: 'column', 
-                      gap: '10px'
+                      gap: '10px',
+                      flex: 1
                     }}>
                       {categories.map(category => (
                         <button
@@ -411,28 +392,6 @@ function MapComponent() {
                   </div>
                 </div>
               </div>
-              
-              {/* Search button now below options */}
-              <button
-                ref={searchButtonRef}
-                onClick={() => {
-                  handleManualSearch();
-                  setShowResults(true);
-                }}
-                style={{
-                  backgroundColor: '#2563eb',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '12px',
-                  padding: '16px 24px',
-                  fontSize: '16px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  width: '100%',
-                }}
-              >
-                Search
-              </button>
 
               {error && <div style={{ color: 'red', marginTop: '8px' }}>{error}</div>}
             </div>
@@ -442,7 +401,7 @@ function MapComponent() {
           {showResults && (
             <div
               style={{
-                backgroundColor: '#f0f7ff', // Light blue background
+                backgroundColor: '#f0f7ff',
                 borderRadius: '16px',
                 padding: '24px',
                 border: '1px solid #d1e4ff',
