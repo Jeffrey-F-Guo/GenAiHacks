@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from agents.input_agent import model
+from backend.agents.agent_sim import model
 import os
 import json
 

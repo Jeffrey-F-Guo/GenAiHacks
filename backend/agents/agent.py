@@ -42,7 +42,7 @@ def find_places(location="San Francisco", interest="fun things", time="", date="
     
     response = requests.get(url, params=params)
     data = response.json()
-    
+    # return a list of places in json format
     return [
         {
             "name": place.get("name"),
@@ -63,7 +63,8 @@ def extract_preferences(text):
     Returns:
         dict: Extracted preferences
     """
-    model = genai.GenerativeModel("gemini-1.5-pro")
+    # choose between flash and pro
+    model = genai.GenerativeModel("gemini-1.5-flash")
     structured_prompt = f"""
     Extract the following from the user input:
     - location (city or area)
@@ -147,6 +148,7 @@ def run_agent(user_input):
     response = agent.chat(user_input)
     return response.response
 
+# used for the CLI version
 def format_places_response(places):
     """Format the places results into a more readable response"""
     model = genai.GenerativeModel("gemini-1.5-pro")
@@ -161,20 +163,20 @@ def format_places_response(places):
     response = model.generate_content(prompt)
     return response.text
 
-def main():
-    print("Welcome to the Places Recommendation Agent!")
-    print("Ask me to find places or activities in any location.")
-    print("Example: 'I'm looking for Italian restaurants in Chicago this Friday evening'")
-    print("Type 'exit' to quit.")
+# def main():
+#     print("Welcome to the Places Recommendation Agent!")
+#     print("Ask me to find places or activities in any location.")
+#     print("Example: 'I'm looking for Italian restaurants in Chicago this Friday evening'")
+#     print("Type 'exit' to quit.")
     
-    while True:
-        user_input = input("\nYou: ")
-        if user_input.lower() in ['exit', 'quit']:
-            print("Goodbye!")
-            break
+#     while True:
+#         user_input = input("\nYou: ")
+#         if user_input.lower() in ['exit', 'quit']:
+#             print("Goodbye!")
+#             break
         
-        response = run_agent(user_input)
-        print(f"\nAgent: {response}")
+#         response = run_agent(user_input)
+#         print(f"\nAgent: {response}")
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#    main()

@@ -18,8 +18,8 @@ model = genai.GenerativeModel("gemini-1.5-pro")
 
 
 def find_places(preferences):
-    location = preferences.get("location", "San Francisco")
-    interest = preferences.get("interest", "fun things")
+    location = preferences.get("location", "")
+    interest = preferences.get("interest", "")
     time = preferences.get("time", "")
     date = preferences.get("date", "")
 
@@ -45,7 +45,7 @@ def find_places(preferences):
             "rating": place.get("rating"),
             "types": place.get("types"),
         }
-        for place in data.get("results", [])[:5]
+        for place in data.get("results", [])[:4]
     ]
 
 
@@ -89,28 +89,28 @@ User input:
 
 def run_agent(user_input):
     preferences = extract_preferences(user_input)
-    print("Extracted:", preferences)
+    # print("Extracted:", preferences)
 
     if preferences:
         results = find_places(preferences)
-        return json.dumps(results, indent=2)
+        
+        # print("Results:", results)
+        return results
     else:
         return "Sorry, I couldn't understand your request."
 
-# # Test run
-# result = extract_event_preferences(prompt)
-# print("\nStructured Preferences:\n", json.dumps(result, indent=2))
 
-preferences = {
-    "location": "San Francisco",
-    "interest": "fun things",
-    "time": "evening",
-    "date": "Saturday"
-}
 
-message = "I'm in San Francisco and want to go out Saturday night. Any fun ideas?";
-response = run_agent(message)
-print(response)
+# preferences = {
+#     "location": "San Francisco",
+#     "interest": "fun things",
+#     "time": "evening",
+#     "date": "Saturday"
+# }
+
+# message = "I'm in San Francisco and want to go out Saturday night. Any fun ideas?";
+# response = run_agent(message)
+# print(response)
 
 
 
