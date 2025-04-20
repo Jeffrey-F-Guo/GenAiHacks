@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import './App.css'
-import MapComponent from './components/GoogleMap'
+import ExploreApp from './components/ExploreApp'
 
 function App() {
   const [savedNote, setSavedNote] = useState<string>('');
@@ -20,7 +20,7 @@ function App() {
       </div>
       
       {/* Map */}
-      <MapComponent />
+      <ExploreApp />
       
     </div>
   )
