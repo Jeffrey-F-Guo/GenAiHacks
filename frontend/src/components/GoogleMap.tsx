@@ -321,7 +321,7 @@ function MapComponent() {
   };
 
   return apiKey ? (
-    <LoadScript googleMapsApiKey={apiKey} libraries={['places']}>
+    <LoadScript googleMapsApiKey={apiKey} libraries={['places', 'geometry']}>
       <div className="map-container" style={{ 
         display: 'flex', 
         flexDirection: 'column', 
