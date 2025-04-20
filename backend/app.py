@@ -1,10 +1,8 @@
-from flask import Flask
-import requests
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
 import os
-from views import api_blueprint
-from agents.search_agent import SearchAgent
+from agents.agent import run_agent
 
 load_dotenv()
 
@@ -13,7 +11,6 @@ app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 # Register the API blueprint
-app.register_blueprint(api_blueprint)
 
 @app.route('/')
 def home():
