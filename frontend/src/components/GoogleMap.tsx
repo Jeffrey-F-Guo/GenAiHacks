@@ -238,8 +238,9 @@ function MapComponent() {
         if (status === 'OK' && results && results[0]) {
           updateMapPosition(results[0].geometry.location);
           setShowResults(true);
-          // Show chat when search is successful
+          // Show chat when search is successful and ensure it's minimized
           setShowChat(true);
+          setMinimizeChat(true);
           // Scroll to results after a short delay to ensure DOM is updated
           setTimeout(() => {
             resultsRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -252,8 +253,9 @@ function MapComponent() {
       setError('Please enter a location to search.');
     } else {
       setShowResults(true);
-      // Show chat when search is successful
+      // Show chat when search is successful and ensure it's minimized
       setShowChat(true);
+      setMinimizeChat(true);
       // Scroll to results after a short delay to ensure DOM is updated
       setTimeout(() => {
         resultsRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -755,10 +757,10 @@ function MapComponent() {
               position: 'fixed',
               bottom: '20px',
               right: '20px',
-              width: minimizeChat ? '60px' : '350px',
-              height: minimizeChat ? '60px' : '400px',
+              width: minimizeChat ? '200px' : '280px',
+              height: minimizeChat ? '50px' : '400px',
               backgroundColor: '#fff',
-              borderRadius: '16px',
+              borderRadius: minimizeChat ? '25px' : '16px',
               boxShadow: '0 8px 24px rgba(0, 0, 0, 0.15)',
               overflow: 'hidden',
               zIndex: 1000,
@@ -766,86 +768,123 @@ function MapComponent() {
               flexDirection: 'column',
               transition: 'all 0.3s ease',
               border: '1px solid #d1e4ff',
+              maxWidth: '20%',
             }}
           >
-            {/* Chat Header */}
+            {/* Chat Header or Bar */}
             <div
               style={{
                 backgroundColor: '#2563eb',
-                padding: minimizeChat ? '10px' : '16px',
+                padding: minimizeChat ? '10px 16px' : '16px',
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 color: 'white',
                 cursor: 'pointer',
+                height: minimizeChat ? '100%' : 'auto',
               }}
               onClick={() => setMinimizeChat(!minimizeChat)}
             >
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                {!minimizeChat && (
-                  <span style={{ 
-                    backgroundColor: '#1d4ed8', 
-                    borderRadius: '50%', 
-                    width: '32px', 
-                    height: '32px', 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center',
-                    marginRight: '12px',
-                  }}>
-                    🧭
-                  </span>
-                )}
-                <span style={{ 
-                  fontWeight: 600, 
-                  fontSize: minimizeChat ? '0' : '16px', 
-                  transition: 'font-size 0.3s ease',
-                  whiteSpace: 'nowrap'
+              {minimizeChat ? (
+                /* Minimized bar with greeting */
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  width: '100%'
                 }}>
-                  Venture Assistant
-                </span>
-              </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: 'white',
-                    cursor: 'pointer',
-                    padding: '4px',
-                    fontSize: '18px',
-                    fontWeight: 'bold',
-                    lineHeight: 1,
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setMinimizeChat(!minimizeChat);
-                  }}
-                >
-                  {minimizeChat ? '↗' : '↘'}
-                </button>
-                <button
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: 'white',
-                    cursor: 'pointer',
-                    padding: '4px',
-                    fontSize: '18px',
-                    fontWeight: 'bold',
-                    lineHeight: 1,
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowChat(false);
-                  }}
-                >
-                  ×
-                </button>
-              </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ 
+                      backgroundColor: '#1d4ed8', 
+                      borderRadius: '50%', 
+                      width: '26px', 
+                      height: '26px', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}>
+                      {'📍'}
+                    </span>
+                    <span style={{ 
+                      fontWeight: 500, 
+                      fontSize: '14px',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis'
+                    }}>
+                      Venture Guide
+                    </span>
+                  </div>
+                  <button
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: 'white',
+                      cursor: 'pointer',
+                      padding: '4px',
+                      fontSize: '18px',
+                      fontWeight: 'bold',
+                      lineHeight: 1,
+                      flexShrink: 0
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setMinimizeChat(false);
+                    }}
+                  >
+                    ↗
+                  </button>
+                </div>
+              ) : (
+                /* Expanded header */
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <span style={{ 
+                      backgroundColor: '#1d4ed8', 
+                      borderRadius: '50%', 
+                      width: '32px', 
+                      height: '32px', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      marginRight: '12px',
+                    }}>
+                      {'📍'}
+                    </span>
+                    <span style={{ 
+                      fontWeight: 600, 
+                      fontSize: '16px', 
+                      whiteSpace: 'nowrap'
+                    }}>
+                      Venture Assistant
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: 'white',
+                        cursor: 'pointer',
+                        padding: '4px',
+                        fontSize: '18px',
+                        fontWeight: 'bold',
+                        lineHeight: 1,
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setMinimizeChat(true);
+                      }}
+                    >
+                      ↘
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
 
-                          {/* Chat Messages */}
+            {/* Chat Messages */}
             {!minimizeChat && (
               <div
                 style={{
@@ -874,7 +913,7 @@ function MapComponent() {
                       border: message.sender === 'user' 
                         ? 'none' 
                         : '1px solid #e2e8f0',
-                      fontSize: '14px',
+                      fontSize: '13px',
                       lineHeight: 1.5,
                     }}
                   >
@@ -909,7 +948,8 @@ function MapComponent() {
                     border: '1px solid #d1d5db',
                     fontSize: '14px',
                     outline: 'none',
-                    backgroundColor: '#f9fafb',
+                    backgroundColor: 'white',
+                    color: '#333',
                   }}
                 />
                 <button
