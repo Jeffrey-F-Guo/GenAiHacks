@@ -71,15 +71,32 @@ def format_response(raw_output):
     """
     print("Raw output:", raw_output)
     
-    # If raw_output is already a list (direct output from find_places)
+    # If raw_output is already a list, use it directly
+    if isinstance(raw_output, list):
+        return {"recommendations": raw_output}
+    
+    # If raw_output is a string, convert single quotes to double quotes and parse
     if isinstance(raw_output, str):
         try:
-            raw_output = json.loads(raw_output)
-        except json.JSONDecodeError:
-            raw_output = []
-    new_output = {"recommendations": raw_output}
-    print("New output:", new_output)
-    return new_output
+            # Replace single quotes with double quotes for JSON compatibility
+            cleaned_output = raw_output.replace("'", "\"")
+            parsed_output = json.loads(cleaned_output)
+            
+            # If it's a list, wrap it in recommendations
+            if isinstance(parsed_output, list):
+                return {"recommendations": parsed_output}
+            
+            # If it already has recommendations key, return as is
+            if isinstance(parsed_output, dict) and "recommendations" in parsed_output:
+                return parsed_output
+            
+            # Otherwise wrap dict in recommendations
+            return {"recommendations": parsed_output}
+        except json.JSONDecodeError as e:
+            print(f"Failed to parse string after quote replacement: {e}")
+    
+    # Fallback to empty recommendations
+    return {"recommendations": []}
 
 def setup_react_agent():
     """
@@ -171,51 +188,16 @@ The final response must be a JSON object with a 'recommendations' array containi
     # Get the agent's response
     response = agent.chat(prompt)
     
-    # Parse the response
-    try:
-        # First try direct JSON parsing
-        response_data = json.loads(response.response)
-        print("in the try block", response_data)
-        # If it's already in the correct format, return it
-        if isinstance(response_data, dict) and 'recommendations' in response_data:
-            return response_data
-            
-        # If it's a list, wrap it in recommendations
-        if isinstance(response_data, list):
-            return {
-                'recommendations': response_data,
-                'query': {
-                    'location': location,
-                    'interest': interest,
-                    'time': time,
-                    'date': date,
-                    'notes': notes
-                }
-            }
-    except json.JSONDecodeError:
-        # If parsing fails, try to extract JSON from the text
-        try:
-            import re
-            json_match = re.search(r'\{.*\}', response.response, re.DOTALL)
-            if json_match:
-                response_data = json.loads(json_match.group())
-                if isinstance(response_data, dict) and 'recommendations' in response_data:
-                    return response_data
-        except:
-            pass
-
-    # If all parsing attempts fail, return empty recommendations
-    print("Failed to parse agent response")
-    print(response)
-    return response
-    # return {
-    #     'recommendations': [],
-    #     'query': {
-    #         'location': location,
-    #         'interest': interest,
-    #         'time': time,
-    #         'date': date,
-    #         'notes': notes
-    #     },
-    #     'error': 'Failed to parse agent response'
-    # }
+    # Process the response with our simplified format_response function
+    result = format_response(response.response)
+    
+    # Add query info to the result
+    result['query'] = {
+        'location': location,
+        'interest': interest,
+        'time': time,
+        'date': date,
+        'notes': notes
+    }
+    
+    return result

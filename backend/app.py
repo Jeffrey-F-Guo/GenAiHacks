@@ -31,7 +31,6 @@ def handle_preferences():
     stringified_json = json.dumps(data)
     # call agent to handle preferences
     response = run_agent(stringified_json)
-    print("Agent response:", response)
     return jsonify(response)
 
 
