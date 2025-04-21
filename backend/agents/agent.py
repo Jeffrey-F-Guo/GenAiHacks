@@ -64,8 +64,7 @@ def find_places(location="San Francisco", interest=["fun things"], time="", date
 def format_response(raw_output):
     """
     Normalize the agent output into the expected frontend schema.
-    IMPORTANT: Do NOT add any additional text or formatting.
-    IMPORTANT: ALWAYS returns:
+    Always returns:
     {
         "recommendations": [
             {
@@ -77,9 +76,12 @@ def format_response(raw_output):
         ]
     }
     """
+    print("format_response input type:", type(raw_output))
+    print("format_response raw input:", raw_output)
     
     # If raw_output is already a list, use it directly
     if isinstance(raw_output, list):
+        print("format_response: handling list input")
         return {"recommendations": raw_output}
     
     # If raw_output is a string, try to parse it
@@ -87,6 +89,7 @@ def format_response(raw_output):
         try:
             # Replace single quotes with double quotes for JSON compatibility
             cleaned_output = raw_output.replace("'", "\"")
+            print("format_response: cleaned string:", cleaned_output)
             parsed_output = json.loads(cleaned_output)
             print("format_response: parsed string:", parsed_output)
             
@@ -118,7 +121,7 @@ def setup_react_agent():
     llm = Gemini(
         api_key=GEMINI_API_KEY,
         model_name="gemini-1.5-pro",
-        temperature=0.2,
+        temperature=0.2
     )
     
     # Create tools
@@ -143,8 +146,6 @@ def setup_react_agent():
     The `format_response` tool should always be the last tool used to ensure the output has the correct format.
     
     Return the final JSON response that includes the recommendations array.
-
-    IMPORTANT: IF THE TOOLS ARE UNABLE TO WORK AS EXPECTED, MANUALLY CREATE A CORRECT JSON RESPONSE WITH NO MORE THAN4 RECOMMENDATIONS.
     """
     
     # Create ReAct agent with our tools and LLM
@@ -152,8 +153,7 @@ def setup_react_agent():
         [find_places_tool, format_response_tool],
         llm=llm,
         verbose=True,
-        system_prompt=system_prompt,  # Pass the system prompt during agent creation
-        max_turns=500
+        system_prompt=system_prompt  # Pass the system prompt during agent creation
     )
     
     return agent
@@ -196,7 +196,19 @@ Additional Notes: {notes}
 
 Use the find_places tool to get recommendations, then use format_response to ensure the output has the correct format.
 
-IMPORTANT: Your final response must be a valid JSON string that can be parsed with json.loads(). 
+IMPORTANT: When using the format_response tool:
+1. Pass the output from find_places directly to format_response
+2. Do NOT wrap the output in quotes or convert it to a string
+3. The format_response tool expects a Python object, not a string representation of it
+
+For example, if find_places returns a list of places, call format_response like this:
+format_response(places_list)
+
+
+BALANCING MULTIPLE INTERESTS:
+If the user has specified multiple interests (comma-separated), make sure to provide an even balance of recommendations across all interests. For example, if the user is interested in both "restaurants" and "parks", provide recommendations for both categories rather than focusing on just one.
+
+Your final response must be a valid JSON string that can be parsed with json.loads(). 
 The JSON should have this exact structure:
 {{
     "recommendations": [
