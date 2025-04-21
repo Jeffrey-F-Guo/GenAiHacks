@@ -8,6 +8,16 @@ interface SearchOptionsProps {
   handleRadiusChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   selectedCategories: string[];
   handleCategoryToggle: (categoryId: string) => void;
+  onSearchOptionsChange?: (options: SearchOptionsData) => void;
+  location?: string;
+}
+
+// Define the structure of our search options data
+export interface SearchOptionsData {
+  location: string;
+  radius: number;
+  categories: string[];
+
 }
 
 const SearchOptions: React.FC<SearchOptionsProps> = ({
@@ -16,7 +26,30 @@ const SearchOptions: React.FC<SearchOptionsProps> = ({
   handleRadiusChange,
   selectedCategories,
   handleCategoryToggle,
+  onSearchOptionsChange,
+  location = '',
 }) => {
+  // Function to aggregate the current search options into a JSON format
+  const aggregateSearchOptions = () => {
+    const options: SearchOptionsData = {
+      location: location,
+      radius: radiusInMiles,
+      categories: selectedCategories,
+    };
+    
+    // If the parent component provided a callback, call it with the aggregated data
+    if (onSearchOptionsChange) {
+      onSearchOptionsChange(options);
+    }
+    
+    return options;
+  };
+
+  // Call aggregateSearchOptions whenever the options change
+  React.useEffect(() => {
+    aggregateSearchOptions();
+  }, [radiusInMiles, selectedCategories, location]);
+
   return (
     <div 
       style={{ 

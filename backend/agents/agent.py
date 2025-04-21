@@ -15,7 +15,7 @@ GEMINI_API_KEY = os.getenv('GOOGLE_GENAI_API_KEY')
 GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
 genai.configure(api_key=GEMINI_API_KEY)
 
-def find_places(location="San Francisco", interest="fun things", time="", date=""):
+def find_places(location="San Francisco", interest="fun things", time="", date="", radius=10):
     """
     Find places or events based on user preferences.
     
@@ -24,9 +24,10 @@ def find_places(location="San Francisco", interest="fun things", time="", date="
         interest (str): The type of place or activity to find
         time (str): Time of day (morning, afternoon, evening, night)
         date (str): The date or day for the activity
+        radius (int): The radius in miles to search for places around the location
         
     Returns:
-        list: A list of recommended places with their details
+        dict: A list of recommended places with their details in JSON format
     """
     query = f"{interest} in {location}"
     if time:
@@ -50,53 +51,35 @@ def find_places(location="San Francisco", interest="fun things", time="", date="
             "rating": place.get("rating", "No rating"),
             "types": place.get("types", [])
         }
-        for place in data.get("results", [])[:5]
+        for place in data.get("results", [])[:4]
     ]
 
-def extract_preferences(text):
+def format_response(raw_output):
     """
-    Extract location, interest, time, and date from user input.
-    
-    Args:
-        text (str): User's natural language input
-        
-    Returns:
-        dict: Extracted preferences
+    Normalize the agent output into the expected frontend schema.
+    Always returns:
+    {
+        "recommendations": [
+            {
+                "name": ...,
+                "address": ...,
+                "rating": ...,
+                "types": [...]
+            }, ...
+        ]
+    }
     """
-    # choose between flash and pro
-    model = genai.GenerativeModel("gemini-1.5-flash")
-    structured_prompt = f"""
-    Extract the following from the user input:
-    - location (city or area)
-    - interest (type of activity or place)
-    - time (time of day like morning, afternoon, evening, night)
-    - date (specific date or day of week)
+    print("Raw output:", raw_output)
     
-    Return ONLY a valid JSON object with these keys, with empty string values if not mentioned.
-    
-    User input: "{text}"
-    """
-    
-    try:
-        response = model.generate_content(structured_prompt)
-        json_str = response.text.strip()
-        
-        # Handle if the response has markdown code blocks
-        if "```json" in json_str:
-            json_str = json_str.split("```json")[1].split("```")[0].strip()
-        elif "```" in json_str:
-            json_str = json_str.split("```")[1].split("```")[0].strip()
-            
-        preferences = json.loads(json_str)
-        return preferences
-    except Exception as e:
-        print(f"Error extracting preferences: {e}")
-        return {
-            "location": "San Francisco",
-            "interest": "fun things",
-            "time": "",
-            "date": ""
-        }
+    # If raw_output is already a list (direct output from find_places)
+    if isinstance(raw_output, str):
+        try:
+            raw_output = json.loads(raw_output)
+        except json.JSONDecodeError:
+            raw_output = []
+    new_output = {"recommendations": raw_output}
+    print("New output:", new_output)
+    return new_output
 
 def setup_react_agent():
     """
@@ -113,70 +96,126 @@ def setup_react_agent():
     )
     
     # Create tools
-    extract_tool = FunctionTool.from_defaults(
-        name="extract_preferences",
-        description="Extract location, interest, time, and date preferences from user input",
-        fn=extract_preferences
-    )
-    
     find_places_tool = FunctionTool.from_defaults(
         name="find_places",
         description="Find places or activities based on location, interest, time, and date",
         fn=find_places
     )
+
+    format_response_tool = FunctionTool.from_defaults(
+        name="format_response",
+        description="Format a raw agent output (possibly with markdown code blocks) into a JSON object with a 'recommendations' array. This tool should always be the last one used.",
+        fn=format_response
+    )
+    
+    # Define the system prompt as part of the agent's configuration
+    system_prompt = """
+    You are an event recommendation assistant.
+    
+    The user will provide their preferences as a JSON object containing location, interest, time, date, and radius.
+    Use the `find_places` tool with these parameters to get recommendations.
+    The `format_response` tool should always be the last tool used to ensure the output has the correct format.
+    
+    Return the final JSON response that includes the recommendations array.
+    """
     
     # Create ReAct agent with our tools and LLM
     agent = ReActAgent.from_tools(
-        [extract_tool, find_places_tool],
+        [find_places_tool, format_response_tool],
         llm=llm,
-        verbose=True
+        verbose=True,
+        system_prompt=system_prompt  # Pass the system prompt during agent creation
     )
     
     return agent
 
-def run_agent(user_input):
+def run_agent(user_input: str) -> dict:
     """
-    Process user input with the ReAct agent.
+    Process user input with the ReAct agent and return structured JSON.
     
     Args:
-        user_input (str): User's natural language request
+        user_input: A JSON string containing preferences (location, interest, time, date, notes)
         
     Returns:
-        str: Agent's response with recommendations
+        dict: A dictionary containing recommendations array and query info
     """
+    # Parse the input JSON
+    try:
+        input_data = json.loads(user_input)
+        location = input_data.get('location', '')
+        interest = input_data.get('interest', '')
+        time = input_data.get('time', '')
+        date = input_data.get('date', '')
+        notes = input_data.get('notes', '')
+    except json.JSONDecodeError:
+        return {
+            'recommendations': [],
+            'query': {},
+            'error': 'Invalid input format'
+        }
+
+    # Set up the agent
     agent = setup_react_agent()
-    response = agent.chat(user_input)
-    return response.response
+    
+    # Create a structured prompt for the agent
+    prompt = f"""Find places based on these preferences:
+Location: {location}
+Interest: {interest}
+Time: {time}
+Date: {date}
+Additional Notes: {notes}
 
-# used for the CLI version
-def format_places_response(places):
-    """Format the places results into a more readable response"""
-    model = genai.GenerativeModel("gemini-1.5-pro")
-    
-    prompt = f"""
-    Create a friendly, conversational response that summarizes these place recommendations:
-    {json.dumps(places, indent=2)}
-    
-    Include the name, address, and rating of each place in a well-formatted, easy-to-read way.
-    """
-    
-    response = model.generate_content(prompt)
-    return response.text
+Use the find_places tool to get recommendations, then use format_response to ensure the output has the correct format.
+The final response must be a JSON object with a 'recommendations' array containing place objects with name, address, rating, and types fields."""
 
-# def main():
-#     print("Welcome to the Places Recommendation Agent!")
-#     print("Ask me to find places or activities in any location.")
-#     print("Example: 'I'm looking for Italian restaurants in Chicago this Friday evening'")
-#     print("Type 'exit' to quit.")
+    # Get the agent's response
+    response = agent.chat(prompt)
     
-#     while True:
-#         user_input = input("\nYou: ")
-#         if user_input.lower() in ['exit', 'quit']:
-#             print("Goodbye!")
-#             break
-        
-#         response = run_agent(user_input)
-#         print(f"\nAgent: {response}")
+    # Parse the response
+    try:
+        # First try direct JSON parsing
+        response_data = json.loads(response.response)
+        print("in the try block", response_data)
+        # If it's already in the correct format, return it
+        if isinstance(response_data, dict) and 'recommendations' in response_data:
+            return response_data
+            
+        # If it's a list, wrap it in recommendations
+        if isinstance(response_data, list):
+            return {
+                'recommendations': response_data,
+                'query': {
+                    'location': location,
+                    'interest': interest,
+                    'time': time,
+                    'date': date,
+                    'notes': notes
+                }
+            }
+    except json.JSONDecodeError:
+        # If parsing fails, try to extract JSON from the text
+        try:
+            import re
+            json_match = re.search(r'\{.*\}', response.response, re.DOTALL)
+            if json_match:
+                response_data = json.loads(json_match.group())
+                if isinstance(response_data, dict) and 'recommendations' in response_data:
+                    return response_data
+        except:
+            pass
 
-# if __name__ == "__main__":
-#    main()
+    # If all parsing attempts fail, return empty recommendations
+    print("Failed to parse agent response")
+    print(response)
+    return response
+    # return {
+    #     'recommendations': [],
+    #     'query': {
+    #         'location': location,
+    #         'interest': interest,
+    #         'time': time,
+    #         'date': date,
+    #         'notes': notes
+    #     },
+    #     'error': 'Failed to parse agent response'
+    # }

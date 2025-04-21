@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { LoadScript } from '@react-google-maps/api';
 import { MapPosition, ChatMessage } from './types';
 import { initialCenter } from './constants';
+import { SearchOptionsData } from './components/SearchOptions';
 
 // Import Components
 import LocationSearchSection from './components/LocationSearchSection';
@@ -21,6 +22,11 @@ function ExploreApp() {
   const [selectedCategories, setSelectedCategories] = useState<string[]>(['entertainment']);
   const [isMobile, setIsMobile] = useState<boolean>(window.innerWidth < 1024);
   const [showResults, setShowResults] = useState<boolean>(false);
+  const [searchOptionsData, setSearchOptionsData] = useState<SearchOptionsData>({
+    location: '',
+    radius: 5,
+    categories: ['entertainment'],
+  });
   
   // Chat state
   const [showChat, setShowChat] = useState<boolean>(false);
@@ -33,6 +39,7 @@ function ExploreApp() {
     }
   ]);
   const [chatInput, setChatInput] = useState<string>('');
+  const [agentResponse, setAgentResponse] = useState<any>(null);
 
   // References
   const mapRef = useRef<google.maps.Map | null>(null);
@@ -105,14 +112,14 @@ function ExploreApp() {
       bounds.extend(west);
       
       // Use proper padding type for fitBounds
-      const padding: google.maps.Padding = {
+      const padding = {
         top: 50,
         right: 50,
         bottom: 50,
         left: 50
       };
       
-      mapRef.current.fitBounds(bounds, { padding });
+      mapRef.current.fitBounds(bounds, padding);
     }
   }, [markerPosition]);
 
@@ -198,21 +205,71 @@ function ExploreApp() {
     setRadiusInMiles(newRadius);
   };
 
+  // Update searchOptionsData when inputValue changes
+  useEffect(() => {
+    setSearchOptionsData(prev => ({
+      ...prev,
+      location: inputValue
+    }));
+  }, [inputValue]);
+
+  // Handle search options change
+  const handleSearchOptionsChange = (options: SearchOptionsData) => {
+    setSearchOptionsData(options);
+  };
+
   // Handle search button click
-  const handleSearch = () => {
-    if (inputValue.trim() && window.google && window.google.maps) {
-      const geocoder = new window.google.maps.Geocoder();
-      geocoder.geocode({ address: inputValue }, (results, status) => {
+  const handleSearch = async () => {
+    if (inputValue.trim()) {
+      const geocoder = new google.maps.Geocoder();
+      geocoder.geocode({ address: inputValue }, async (results, status) => {
         if (status === 'OK' && results && results[0]) {
           updateMapPosition(results[0].geometry.location);
-          setShowResults(true);
-          // Show chat when search is successful and ensure it's minimized
-          setShowChat(true);
-          setMinimizeChat(true);
-          // Scroll to results after a short delay to ensure DOM is updated
-          setTimeout(() => {
-            resultsRef.current?.scrollIntoView({ behavior: 'smooth' });
-          }, 100);
+          
+          try {
+            console.log('Sending request with data:', {
+              location: searchOptionsData.location,
+              interest: searchOptionsData.categories.join(', '),
+              time: '',
+              date: '',
+              radius: radiusInMiles,
+              notes: notesValue
+            });
+
+            const response = await fetch('http://127.0.0.1:5000/handle_preferences', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                location: searchOptionsData.location,
+                interest: searchOptionsData.categories.join(', '),
+                time: '',
+                date: '',
+                radius: radiusInMiles,
+                notes: notesValue
+              })
+            });
+
+            if (!response.ok) {
+              throw new Error('Failed to get response from server');
+            }
+
+            const data = await response.json();
+            console.log('Backend response:', data);
+            console.log('Setting agent response:', data);
+            setAgentResponse(data);  // Store the agent's response
+            
+            setShowResults(true);
+            setShowChat(true);
+            setMinimizeChat(true);
+            setTimeout(() => {
+              resultsRef.current?.scrollIntoView({ behavior: 'smooth' });
+            }, 100);
+          } catch (error) {
+            console.error('Error:', error);
+            setError('Failed to get recommendations. Please try again.');
+          }
         } else {
           setError('Location not found. Try a different address.');
         }
@@ -221,10 +278,8 @@ function ExploreApp() {
       setError('Please enter a location to search.');
     } else {
       setShowResults(true);
-      // Show chat when search is successful and ensure it's minimized
       setShowChat(true);
       setMinimizeChat(true);
-      // Scroll to results after a short delay to ensure DOM is updated
       setTimeout(() => {
         resultsRef.current?.scrollIntoView({ behavior: 'smooth' });
       }, 100);
@@ -283,6 +338,8 @@ function ExploreApp() {
                 handleRadiusChange={handleRadiusChange}
                 selectedCategories={selectedCategories}
                 handleCategoryToggle={handleCategoryToggle}
+                onSearchOptionsChange={handleSearchOptionsChange}
+                location={inputValue}
               />
             </div>
 
@@ -304,6 +361,7 @@ function ExploreApp() {
           isMobile={isMobile}
           selectedCategories={selectedCategories}
           radiusInMiles={radiusInMiles}
+          agentResponse={agentResponse}
         />
         
         {/* Chat Widget */}
