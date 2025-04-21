@@ -15,13 +15,13 @@ GEMINI_API_KEY = os.getenv('GOOGLE_GENAI_API_KEY')
 GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
 genai.configure(api_key=GEMINI_API_KEY)
 
-def find_places(location="San Francisco", interest="fun things", time="", date="", radius=10):
+def find_places(location="San Francisco", interest=["fun things"], time="", date="", radius=10):
     """
     Find places or events based on user preferences.
     
     Args:
         location (str): The city or area to search in
-        interest (str): The type of place or activity to find
+        interest (list): The type(s) of place or activity to find
         time (str): Time of day (morning, afternoon, evening, night)
         date (str): The date or day for the activity
         radius (int): The radius in miles to search for places around the location
@@ -29,11 +29,15 @@ def find_places(location="San Francisco", interest="fun things", time="", date="
     Returns:
         dict: A list of recommended places with their details in JSON format
     """
+    print("find_places input - interest:", interest)
+    interest = " or ".join(interest)
     query = f"{interest} in {location}"
     if time:
         query += f" during the {time}"
     if date:
         query += f" on {date}"
+    
+    print("find_places query:", query)
     
     url = "https://maps.googleapis.com/maps/api/place/textsearch/json"
     params = {
@@ -43,8 +47,7 @@ def find_places(location="San Francisco", interest="fun things", time="", date="
     
     response = requests.get(url, params=params)
     data = response.json()
-    # return a list of places in json format
-    return [
+    results = [
         {
             "name": place.get("name"),
             "address": place.get("formatted_address"),
@@ -53,6 +56,8 @@ def find_places(location="San Francisco", interest="fun things", time="", date="
         }
         for place in data.get("results", [])[:4]
     ]
+    print("find_places output:", results)
+    return results
 
 def format_response(raw_output):
     """
@@ -69,18 +74,22 @@ def format_response(raw_output):
         ]
     }
     """
-    print("Raw output:", raw_output)
+    print("format_response input type:", type(raw_output))
+    print("format_response raw input:", raw_output)
     
     # If raw_output is already a list, use it directly
     if isinstance(raw_output, list):
+        print("format_response: handling list input")
         return {"recommendations": raw_output}
     
-    # If raw_output is a string, convert single quotes to double quotes and parse
+    # If raw_output is a string, try to parse it
     if isinstance(raw_output, str):
         try:
             # Replace single quotes with double quotes for JSON compatibility
             cleaned_output = raw_output.replace("'", "\"")
+            print("format_response: cleaned string:", cleaned_output)
             parsed_output = json.loads(cleaned_output)
+            print("format_response: parsed string:", parsed_output)
             
             # If it's a list, wrap it in recommendations
             if isinstance(parsed_output, list):
@@ -93,9 +102,10 @@ def format_response(raw_output):
             # Otherwise wrap dict in recommendations
             return {"recommendations": parsed_output}
         except json.JSONDecodeError as e:
-            print(f"Failed to parse string after quote replacement: {e}")
+            print("format_response: failed to parse string:", e)
     
     # Fallback to empty recommendations
+    print("format_response: falling back to empty recommendations")
     return {"recommendations": []}
 
 def setup_react_agent():
@@ -183,21 +193,47 @@ Date: {date}
 Additional Notes: {notes}
 
 Use the find_places tool to get recommendations, then use format_response to ensure the output has the correct format.
-The final response must be a JSON object with a 'recommendations' array containing place objects with name, address, rating, and types fields."""
+
+IMPORTANT: Your final response must be a valid JSON string that can be parsed with json.loads(). 
+The JSON should have this exact structure:
+{{
+    "recommendations": [
+        {{
+            "name": "place name",
+            "address": "place address",
+            "rating": "rating value",
+            "types": ["type1", "type2"]
+        }},
+        ...
+    ]
+}}
+
+Do not include any additional text or formatting. Return only the JSON string."""
 
     # Get the agent's response
     response = agent.chat(prompt)
     
-    # Process the response with our simplified format_response function
-    result = format_response(response.response)
-    
-    # Add query info to the result
-    result['query'] = {
-        'location': location,
-        'interest': interest,
-        'time': time,
-        'date': date,
-        'notes': notes
-    }
-    
-    return result
+    # Parse the agent's response
+    try:
+        result = json.loads(response.response)
+        # Add query info to the result
+        result['query'] = {
+            'location': location,
+            'interest': interest,
+            'time': time,
+            'date': date,
+            'notes': notes
+        }
+        return result
+    except json.JSONDecodeError:
+        return {
+            'recommendations': [],
+            'query': {
+                'location': location,
+                'interest': interest,
+                'time': time,
+                'date': date,
+                'notes': notes
+            },
+            'error': 'Failed to parse agent response'
+        }
