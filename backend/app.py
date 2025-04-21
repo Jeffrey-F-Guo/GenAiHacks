@@ -27,7 +27,6 @@ def handle_preferences():
     data = request.json
     if not data:
         return jsonify({"error": "No data provided"}), 400
-    print("Received data:", data)
     stringified_json = json.dumps(data)
     # call agent to handle preferences
     response = run_agent(stringified_json)
